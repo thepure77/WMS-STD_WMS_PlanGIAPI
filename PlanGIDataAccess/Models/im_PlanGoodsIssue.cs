@@ -382,5 +382,13 @@ namespace PlanGIDataAccess.Models
         public string TruckLoad_No { get; set; }
         public string GoodsIssue_No { get; set; }
         public int? RunWave_Status { get; set; }
+
+        public string Transaction_Id { get; set; }
+        public string Shipping_Channel { get; set; }
+        public string Export_Case { get; set; }
+        public string SubDistrict_Name { get; set; }
+        public string District_Name { get; set; }
+        public string Province_Name { get; set; }
+        public string Postcode_Name { get; set; }
     }
 }

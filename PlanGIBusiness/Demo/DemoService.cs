@@ -100,13 +100,26 @@ namespace PlanGIBusiness.Demo
                         result.message = "Order Duplicate";
                         return result;
                     }
-                    
+
+                    var tran = db.im_PlanGoodsIssue.Where(c => c.Transaction_Id == param.wmsTrans_Id).FirstOrDefault();
+                    if (tran != null)
+                    {
+                        result.stauts = "-1";
+                        result.message = "wmsTrans_Id Duplicate";
+                        return result;
+                    }
+
                     var url = new AppSettingConfig().GetUrl("dropDownDocumentType");
                     var docrequest = new GenDocumentTypeViewModel();
                     docrequest.documentType_Index = Guid.Parse("7A0710B4-DAD8-47DD-8424-2AB50B8D37A8");
                     //docrequest.documentType_Id = "PK10";
                     docrequest.process_Index = Guid.Parse("80E8E627-6A2D-4075-9BA6-04B7178C1203");
                     var doctype = utils.SendDataApi<List<GenDocumentTypeViewModel>>(new AppSettingConfig().GetUrl("dropDownDocumentType"), docrequest.sJson());
+
+                    var OwnerModel = new OwnerViewModel();
+                    var urlOwner = new AppSettingConfig().GetUrl("dropdownOwner");
+                    var resultOwner = utils.SendDataApi<List<OwnerViewModel>>(urlOwner, OwnerModel.sJson());
+                    var DataOwner = resultOwner.Find(c => c.owner_Index == Guid.Parse("02B31868-9D3D-448E-B023-05C121A424F4"));
 
                     DateTime DocumentDate = Convert.ToDateTime(DateTime.Now);
                     im_PlanGoodsIssue head = new im_PlanGoodsIssue();
@@ -115,7 +128,12 @@ namespace PlanGIBusiness.Demo
                     head.DocumentType_Index = doctype[0].documentType_Index;
                     head.DocumentType_Id = doctype[0].documentType_Id;
                     head.DocumentType_Name = doctype[0].documentType_Name;
-                    head.Owner_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
+                    //head.Owner_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
+
+                    head.Owner_Index = DataOwner.owner_Index;
+                    head.Owner_Id = DataOwner.owner_Id;
+                    head.Owner_Name = DataOwner.owner_Name;
+
                     head.SoldTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
                     head.ShipTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
                     head.ShipTo_Name = param.name;
@@ -136,7 +154,6 @@ namespace PlanGIBusiness.Demo
                     head.Transaction_Id = param.wmsTrans_Id;
                     head.Shipping_Channel = param.so_Cha;
                     head.Export_Case = param.export_Case;
-
                     //head.ShippingMethod_Index = Guid.Parse("F6799861-0A44-42B3-8F9B-49CE89448B2A");
                     //head.ShippingMethod_Id = "DD";
                     //head.ShippingMethod_Name = "ส่งตามรอบ";
@@ -153,6 +170,7 @@ namespace PlanGIBusiness.Demo
                         im_PlanGoodsIssueItem planItem = new im_PlanGoodsIssueItem();
                         planItem.PlanGoodsIssueItem_Index = Guid.NewGuid();
                         planItem.PlanGoodsIssue_Index = head.PlanGoodsIssue_Index;
+                        planItem.PlanGoodsIssue_No = head.PlanGoodsIssue_No;
                         planItem.LineNum = item.line_Num;
                         planItem.Product_Index = productList[i].product_Index;
                         planItem.Product_Id = productList[i].product_Id;
@@ -161,8 +179,8 @@ namespace PlanGIBusiness.Demo
                         planItem.ProductConversion_Index = conversionList[i].productConversion_Index;
                         planItem.ProductConversion_Id = conversionList[i].productConversion_Id;
                         planItem.ProductConversion_Name = conversionList[i].productConversion_Name;
-
-                        state = "4";
+                        planItem.Document_Status = 0;
+                        planItem.ERP_Location = "AB01";
 
                         planItem.Ratio = Convert.ToDecimal(conversionList[i].productconversion_Ratio);
                         planItem.TotalQty = Convert.ToDecimal(item.plan_QTY) * conversionList[i].productconversion_Ratio;
@@ -240,7 +258,6 @@ namespace PlanGIBusiness.Demo
                         planItem.UnitVolume = unitVolume;
                         planItem.Volume = ((planItem.TotalQty ?? 0) * (unitVolume / (planItem.UnitHeightRatio ?? 1)));
                         planItem.Create_By = param.create_By;
-                        planItem.Create_Date = DateTime.Now;
                         planItem.Create_Date = DateTime.Now;
                         i++;
                         db.im_PlanGoodsIssueItem.Add(planItem);

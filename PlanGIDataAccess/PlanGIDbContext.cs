@@ -37,6 +37,8 @@ namespace DataAccess
         public virtual DbSet<View_CheckWave_Round> View_CheckWave_Round { get; set; }
         public virtual DbSet<View_RPT_DeliveryNote_emergency> View_RPT_DeliveryNote_emergency { get; set; }
         public virtual DbSet<View_im_PlanGoodsIssue_status_SAP> View_im_PlanGoodsIssue_status_SAP { get; set; }
+        public virtual DbSet<im_TruckLoad> im_TruckLoad { get; set; }
+        public virtual DbSet<im_TruckLoadItem> im_TruckLoadItem { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

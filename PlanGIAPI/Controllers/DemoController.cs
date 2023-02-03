@@ -27,5 +27,22 @@ namespace PlanGIAPI.Controllers
             }
         }
         #endregion
+
+        #region Shipment
+        [HttpPost("Shipment")]
+        public IActionResult CreateShipment(DemoShipmentRequestViewModel model)
+        {
+            try
+            {
+                var service = new DemoService();
+                var Result = service.CreateShipment(model);
+                return Ok(Result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex);
+            }
+        }
+        #endregion
     }
 }

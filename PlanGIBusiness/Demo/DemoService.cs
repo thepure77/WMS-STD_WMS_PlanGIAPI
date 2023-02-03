@@ -2,9 +2,13 @@
 using Comone.Utils;
 using DataAccess;
 using MasterDataBusiness.ViewModels;
+using Microsoft.EntityFrameworkCore;
+using planGIBusiness.AutoNumber;
+using PlanGIBusiness.ModelConfig;
 using PlanGIDataAccess.Models;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 
@@ -96,10 +100,7 @@ namespace PlanGIBusiness.Demo
                         result.message = "Order Duplicate";
                         return result;
                     }
-
-                    var genList = new List<GenDocumentTypeViewModel>();
-                    var genmodel = new GenDocumentTypeViewModel();
-
+                    
                     var url = new AppSettingConfig().GetUrl("dropDownDocumentType");
                     var docrequest = new GenDocumentTypeViewModel();
                     docrequest.documentType_Index = Guid.Parse("7A0710B4-DAD8-47DD-8424-2AB50B8D37A8");
@@ -261,6 +262,203 @@ namespace PlanGIBusiness.Demo
                 return result;
             }
 
+        }
+
+        public DemoShipmentResponseViewModel CreateShipment(DemoShipmentRequestViewModel param)
+        {
+            var result = new DemoShipmentResponseViewModel();
+            result.message = "";
+            result.reason_code = 0;
+            Boolean IsNew = false;
+            var truckLoadIndex = Guid.NewGuid();
+            var p = param.sJson();
+
+            try
+            {
+                var provider = new System.Globalization.CultureInfo("en-US");
+                //var vehicleUrl = new AppSettingConfig().GetUrl("VehicleTypeUrl");
+                var vehicleModel = new VehicleTypeViewModel();
+                vehicleModel.key = param.vehicleType_Id;
+                //var vehicleJson = SendDataUtil.SerializeObject(vehicleModel);
+                //var vehicle = SendDataUtil.SendDataApi<actionResultVehicleTypeViewModel>(vehicleUrl, vehicleJson);
+                var vehicle = utils.SendDataApi<actionResultVehicleTypeViewModel>(new AppSettingConfig().GetUrl("VehicleTypeUrl"), vehicleModel.sJson());
+
+                if (vehicle == null || vehicle.itemsVehicleType.Count == 0)
+                {
+                    result.document_No = param.tm_no;
+                    result.result = false;
+                    result.message = "vehicleType_Id not found.";
+                    return result;
+                }
+                else
+                {
+                    vehicle.itemsVehicleType = vehicle.itemsVehicleType.Where(c => c.vehicleType_Id == param.vehicleType_Id).ToList();
+                    if (vehicle.itemsVehicleType.Count == 0)
+                    {
+                        result.document_No = param.tm_no;
+                        result.result = false;
+                        result.message = "vehicleType_Id not found.";
+                        return result;
+                    }
+                }
+
+                
+
+                var checkdata = CheckReq_Shipment(param);
+                if (checkdata != "")
+                {
+                    result.document_No = param.tm_no;
+                    result.result = false;
+                    result.message = checkdata;
+                    return result;
+                }
+                else
+                {
+                    var truckLoad = db.im_TruckLoad.Where(c => c.TruckLoad_No == param.tm_no && c.Document_Status != -1).FirstOrDefault();
+                    if (truckLoad != null)
+                    {
+                        result.document_No = param.tm_no;
+                        result.result = false;
+                        result.message = "tm_no is duplicate.";
+                        return result;
+                    }
+                    else
+                    {
+                        foreach (var item in param.items)
+                        {
+                            var planGI = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == item.planGoodsIssue_No && c.Document_Status != -1).FirstOrDefault();
+                            if (planGI == null)
+                            {
+                                result.document_No = param.tm_no;
+                                result.result = false;
+                                result.message = "planGoodsIssue_No " + item.planGoodsIssue_No + " not found.";
+                                return result;
+                            }
+                        }
+
+                        IsNew = true;
+                        var url = new AppSettingConfig().GetUrl("dropDownDocumentType");
+                        var docrequest = new GenDocumentTypeViewModel();
+                        docrequest.documentType_Index = new Guid("971682a9-2083-4bf8-85c3-85ab966ddb66");
+                        docrequest.process_Index = new Guid("1150720E-EE32-426D-A98E-6CC659D9AAD5");
+                        var doctype = utils.SendDataApi<List<GenDocumentTypeViewModel>>(new AppSettingConfig().GetUrl("dropDownDocumentType"), docrequest.sJson());
+
+                        //string tlDate = DateTime.Parse(param.tm_date).ToString("yyyyMMddHHmmss");
+                        //string tlExDate = DateTime.Parse(param.expect_Pickup_Date).ToString("yyyyMMddHHmmss");
+
+                        var genDoc = new AutoNumberService();
+                        string DocNo = "";
+                        //DateTime DocumentDate = (DateTime)data.truckLoad_Date.toDate();
+                        //DateTime DocumentDate = Utils.ConvertStringToDate(DateTime.Now.ToString("yyyyMMdd"));
+                        DateTime DocumentDate = DateTime.Now;
+                        DocNo = genDoc.genAutoDocmentNumber(doctype, DocumentDate);
+
+                        im_TruckLoad itemHeader = new im_TruckLoad();
+                        var document_status = 0;
+                        itemHeader.TruckLoad_Index = truckLoadIndex;
+                        itemHeader.TruckLoad_No = param.tm_no;
+                        itemHeader.TruckLoad_Date = Convert.ToDateTime(param.tm_date);
+                        itemHeader.Vehicle_Registration = param.vehicle_No;
+                        itemHeader.Expect_Pickup_Date = Convert.ToDateTime(param.expect_Pickup_Date);
+                        itemHeader.DocumentType_Index = doctype[0].documentType_Index;
+                        itemHeader.DocumentType_Id = doctype[0].documentType_Id;
+                        itemHeader.DocumentType_Name = doctype[0].documentType_Name;
+                        itemHeader.DocumentRef_No1 = param.driver_Name;
+                        itemHeader.DocumentRef_No2 = param.route_Id;
+                        itemHeader.DocumentRef_No3 = param.subRoute_Id;
+                        //itemHeader.DocumentRef_No4 = param.tm_Index;
+                        itemHeader.DocumentRef_No5 = param.expect_Pickup_Time;
+                        itemHeader.Document_Status = document_status;
+                        itemHeader.VehicleCompany_Id = param.vehicleCompany_Id;
+                        itemHeader.VehicleCompany_Name = param.vehicleCompany_Name;
+                        itemHeader.VehicleType_Index = vehicle.itemsVehicleType[0].vehicleType_Index;
+                        itemHeader.VehicleType_Id = vehicle.itemsVehicleType[0].vehicleType_Id;
+                        itemHeader.VehicleType_Name = param.vehicleType_Name;
+                        itemHeader.DocumentRef_No6 = param.IsAirCon;
+                        itemHeader.DocumentRef_No7 = param.FreightKind_Name;
+                        if (param.flagNoBook == "X")
+                        {
+                            itemHeader.UDF_1 = "NB";
+                        }
+                        else
+                        {
+                        }
+
+                        if (IsNew == true)
+                        {
+                            itemHeader.Create_By = "TMS Interface";
+                            itemHeader.Create_Date = DateTime.Now;
+                        }
+                        db.im_TruckLoad.Add(itemHeader);
+                        
+                        if (param.items != null)
+                        {
+                            foreach (var item in param.items)
+                            {
+                                //string tlExPickDate = DateTime.Parse(item.expect_Delivery_Date).ToString("yyyyMMddHHmmss");
+                                var planGI = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == item.planGoodsIssue_No && c.Document_Status != -1).FirstOrDefault();
+                                //var planGI = omsDB.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == item.planGoodsIssue_No).FirstOrDefault();
+                                if (planGI == null)
+                                {
+                                    result.document_No = param.tm_no;
+                                    result.result = false;
+                                    result.message = "planGoodsIssue_No " + item.planGoodsIssue_No + " not found.";
+                                    
+                                    return result;
+                                }
+                                else
+                                {
+                                    im_TruckLoadItem resultItem = new im_TruckLoadItem();
+                                    resultItem.TruckLoadItem_Index = Guid.NewGuid();
+                                    resultItem.TruckLoad_Index = truckLoadIndex;
+                                    resultItem.DocumentRef_No1 = item.seq;
+                                    resultItem.DocumentRef_No2 = item.item_seq;
+                                    resultItem.DocumentRef_No3 = item.is_return;
+                                    resultItem.DocumentRef_No5 = item.Drop_seq;
+                                    resultItem.Document_Status = 0;
+                                    resultItem.UDF_1 = item.shiptoid;
+                                    resultItem.UDF_2 = item.shiptoname;
+                                    resultItem.UDF_3 = item.shiptoaddress;
+                                    resultItem.UDF_4 = item.tel;
+                                    resultItem.PlanGoodsIssue_Index = planGI.PlanGoodsIssue_Index;
+                                    resultItem.PlanGoodsIssue_No = planGI.PlanGoodsIssue_No;
+                                    resultItem.Expect_Delivery_Date = Convert.ToDateTime(item.expect_Delivery_Date);
+                                    if (IsNew == true)
+                                    {
+                                        resultItem.Create_By = "TMS Interface";
+                                        resultItem.Create_Date = DateTime.Now;
+                                    }
+                                    db.im_TruckLoadItem.Add(resultItem);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                var transactionx = db.Database.BeginTransaction(IsolationLevel.Serializable);
+                try
+                {
+                    db.SaveChanges();
+                    transactionx.Commit();
+                }
+
+                catch (Exception exy)
+                {
+                    transactionx.Rollback();
+                    throw exy;
+
+                }
+                result.document_No = param.tm_no;
+                result.result = true;
+                return result;
+            }
+            catch(Exception ex)
+            {
+                result.document_No = param.tm_no;
+                result.result = false;
+                result.message = "vehicleType_Id not found.";
+                return result;
+            }
         }
 
         public string CheckReq_SO(DemoSORequestViewModel param)
@@ -425,6 +623,143 @@ namespace PlanGIBusiness.Demo
                 else { }
             }
             return result;
+        }
+
+        public string CheckReq_Shipment(DemoShipmentRequestViewModel param)
+        {
+            string message = "";
+            //if (string.IsNullOrEmpty(param.tm_Index))
+            //{
+            //    if (!string.IsNullOrEmpty(message))
+            //    {
+            //        message += " | ";
+            //    }
+            //    message += "tm_Index is empty";
+            //}
+            if (string.IsNullOrEmpty(param.tm_no))
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    message += " | ";
+                }
+                message += "tm_no is empty";
+            }
+            if (string.IsNullOrEmpty(param.tm_date))
+            {
+                message += "tm_date is empty";
+            }
+            if (string.IsNullOrEmpty(param.vehicleType_Id))
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    message += " | ";
+                }
+                message += "vehicleType_Id is empty";
+            }
+            if (string.IsNullOrEmpty(param.vehicleType_Name))
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    message += " | ";
+                }
+                message += "vehicleType_Name is empty";
+            }
+            if (string.IsNullOrEmpty(param.vehicle_No))
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    message += " | ";
+                }
+                message += "vehicle_No is empty";
+            }
+            if (string.IsNullOrEmpty(param.driver_Name))
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    message += " | ";
+                }
+                message += "driver_Name is empty";
+            }
+
+            if (param.items == null)
+            {
+                message += "items is null";
+            }
+            else
+            {
+                foreach (var item in param.items)
+                {
+                    if (string.IsNullOrEmpty(item.planGoodsIssue_No))
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "planGoodsIssue_No is empty";
+                        return message;
+                    }
+
+                    if (string.IsNullOrEmpty(item.seq))
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "seq is empty";
+                        return message;
+                    }
+
+                    if (item.seq == "0")
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "seq is 0";
+                        return message;
+                    }
+
+                    if (string.IsNullOrEmpty(item.Drop_seq))
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "Drop_seq is empty";
+                        return message;
+                    }
+
+                    if (item.Drop_seq == "0")
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "Drop_seq is 0";
+                    }
+
+                    if (string.IsNullOrEmpty(item.item_seq))
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "Item_seq is empty";
+                        return message;
+                    }
+
+                    if (item.item_seq == "0")
+                    {
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            message += " | ";
+                        }
+                        message += "Item_seq is 0";
+                        return message;
+                    }
+                }
+            }
+            return message;
         }
     }
 }

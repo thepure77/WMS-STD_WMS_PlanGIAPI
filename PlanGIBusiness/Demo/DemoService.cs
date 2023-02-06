@@ -28,9 +28,9 @@ namespace PlanGIBusiness.Demo
             this.db = db;
         }
 
-        public DemoSOResponseViewModel CreateSO(DemoSORequestViewModel param)
+        public DemoCallbackViewModel CreateSO(DemoSORequestViewModel param)
         {
-            var result = new DemoSOResponseViewModel();
+            var result = new DemoCallbackViewModel();
             string message = "";
             var productList = new List<ProductViewModel>();
             var conversionList = new List<ProductConversionViewModelDoc>();
@@ -38,11 +38,17 @@ namespace PlanGIBusiness.Demo
             string state = "0";
             try
             {
+                result.referenceNo = param.so_No;
                 var chkreq = CheckReq_SO(param);
                 if (chkreq != "")
                 {
-                    result.stauts = "-1";
-                    result.message = chkreq;
+                    result.status = "-1";
+                    result.statusAfter = "-1";
+                    result.statusBefore = "-1";
+                    result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                    result.statusDesc = chkreq;
+                    Callback_OMS(result);
+                    return result;
                 }
                 else { }
 
@@ -62,7 +68,7 @@ namespace PlanGIBusiness.Demo
                         {
                             message += " | ";
                         }
-                        message += "Product Id " + i.product_Id + " Error : Product not found";
+                        message += " Error : Product " + i.product_Id + " not found";
                         continue;
                     }
 
@@ -79,7 +85,7 @@ namespace PlanGIBusiness.Demo
                         {
                             message += " | ";
                         }
-                        message += "Product Id " + i.product_Id + " Error : Product Conversion not found";
+                        message += " Error : Product " + i.product_Id + " Conversion not found";
                         continue;
                     }
                 }
@@ -87,8 +93,12 @@ namespace PlanGIBusiness.Demo
                 state = "2";
                 if (message != "")
                 {
-                    result.stauts = "-1";
-                    result.message = message;
+                    result.status = "-1";
+                    result.statusAfter = "-1";
+                    result.statusBefore = "-1";
+                    result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                    result.statusDesc = message;
+                    Callback_OMS(result);
                     return result;
                 }
                 else
@@ -96,18 +106,22 @@ namespace PlanGIBusiness.Demo
                     var plan = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == param.so_No).FirstOrDefault();
                     if (plan != null)
                     {
-                        result.stauts = "-1";
-                        result.message = "Order Duplicate";
+                        result.status = "-1";
+                        result.statusAfter = "-1";
+                        result.statusBefore = "-1";
+                        result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                        result.statusDesc = "Order Duplicate";
+                        Callback_OMS(result);
                         return result;
                     }
 
-                    var tran = db.im_PlanGoodsIssue.Where(c => c.Transaction_Id == param.wmsTrans_Id).FirstOrDefault();
-                    if (tran != null)
-                    {
-                        result.stauts = "-1";
-                        result.message = "wmsTrans_Id Duplicate";
-                        return result;
-                    }
+                    //var tran = db.im_PlanGoodsIssue.Where(c => c.Transaction_Id == param.wmsTrans_Id).FirstOrDefault();
+                    //if (tran != null)
+                    //{
+                    //    result.stauts = "-1";
+                    //    result.message = "wmsTrans_Id Duplicate";
+                    //    return result;
+                    //}
 
                     var url = new AppSettingConfig().GetUrl("dropDownDocumentType");
                     var docrequest = new GenDocumentTypeViewModel();
@@ -267,15 +281,23 @@ namespace PlanGIBusiness.Demo
                 state = "5";
                 db.SaveChanges();
 
-                result.stauts = "1";
-                result.message = "SUCCESS";
+                result.status = "1";
+                result.statusAfter = "1";
+                result.statusBefore = "1";
+                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                result.statusDesc = "SUCCESS";
+                Callback_OMS(result);
 
                 return result;
             }
             catch (Exception ex)
             {
-                result.stauts = "0";
-                result.message = state + " : " + ex.Message;
+                result.status = "-1";
+                result.statusAfter = "-1";
+                result.statusBefore = "-1";
+                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                result.statusDesc = state + " : " + ex.Message;
+                Callback_OMS(result);
                 return result;
             }
 
@@ -546,7 +568,7 @@ namespace PlanGIBusiness.Demo
                 }
                 else
                 {
-                    result += " items is emptyd";
+                    result += " items is empty";
                     return result;
                 }
             }
@@ -777,6 +799,19 @@ namespace PlanGIBusiness.Demo
                 }
             }
             return message;
+        }
+
+        public string Callback_OMS(DemoCallbackViewModel param)
+        {
+            try
+            {
+                var conversionMasterResult = utils.SendDataApi<List<ProductConversionViewModelDoc>>(new AppSettingConfig().GetUrl("callback_OMS"), param.sJson());
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Fail";
+            }
         }
     }
 }

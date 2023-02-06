@@ -18,6 +18,7 @@ using Microsoft.IdentityModel.Tokens;
 using APIJWTAndRSA.Class;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace PlanGIAPI
 {
@@ -86,6 +87,33 @@ namespace PlanGIAPI
             //#endregion
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddSwaggerGen(options =>
+            {
+                //var security = new Dictionary<string, IEnumerable<string>>
+                //{
+                //    {"Bearer", new string[] { }},
+                //};
+
+                //options.AddSecurityDefinition("Bearer", new Swashbuckle.AspNetCore.Swagger.ApiKeyScheme()
+                //{
+                //    Description = "Authorization format : Bearer {token}",
+                //    Name = "Authorization",
+                //    In = "header",
+                //    Type = "apiKey"
+                //});
+
+                options.DescribeAllEnumsAsStrings();
+                options.SwaggerDoc("v1", new Swashbuckle.AspNetCore.Swagger.Info
+                {
+                    Title = "Plan GI API",
+                    Version = "v1",
+                    Description = "The Catalog Microservice HTTP API. This is a Data-Driven/CRUD microservice",
+                    TermsOfService = "Service For Amazon Only"
+                });
+
+                //options.AddSecurityRequirement(security);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -107,6 +135,19 @@ namespace PlanGIAPI
             .AllowCredentials());
 
             app.UseHttpsRedirection();
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                RequireHeaderSymmetry = false,
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+
+            app.UseSwagger()
+                .UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Truck Queue API V1");
+                });
+
             //app.UseAuthentication();  // Use Authen Jwt
             app.UseMvc();
         }

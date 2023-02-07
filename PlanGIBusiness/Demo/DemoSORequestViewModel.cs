@@ -21,7 +21,7 @@ namespace PlanGIBusiness.Demo
         public string export_Case { get; set; }
         public string document_Remark { get; set; }
         //public string Creat_Date           { get; set; }
-        public string create_By { get; set; }
+        public string creat_By { get; set; }
         //public string Update_Date          { get; set; }
         //public string update_By { get; set; }
 

@@ -39,12 +39,21 @@ namespace PlanGIBusiness.Demo
             try
             {
                 result.referenceNo = param.so_No;
+                result.status = "100";
+                result.statusAfter = "101";
+                result.statusBefore = "000";
+                result.statusDesc = "Order API";
+                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
                 var chkreq = CheckReq_SO(param);
+
+                result.status = "101";
+                result.statusAfter = "102";
+                result.statusBefore = "100";
+                result.statusDesc = "รอยืนยัน";
+
                 if (chkreq != "")
                 {
-                    result.status = "-1";
-                    result.statusAfter = "-1";
-                    result.statusBefore = "-1";
+                    
                     result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
                     result.statusDesc = chkreq;
                     Callback_OMS(result);
@@ -93,9 +102,7 @@ namespace PlanGIBusiness.Demo
                 state = "2";
                 if (message != "")
                 {
-                    result.status = "-1";
-                    result.statusAfter = "-1";
-                    result.statusBefore = "-1";
+                    
                     result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
                     result.statusDesc = message;
                     Callback_OMS(result);
@@ -106,9 +113,7 @@ namespace PlanGIBusiness.Demo
                     var plan = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == param.so_No).FirstOrDefault();
                     if (plan != null)
                     {
-                        result.status = "-1";
-                        result.statusAfter = "-1";
-                        result.statusBefore = "-1";
+                        
                         result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
                         result.statusDesc = "Order Duplicate";
                         Callback_OMS(result);
@@ -162,7 +167,7 @@ namespace PlanGIBusiness.Demo
 
                     head.Document_Remark = param.document_Remark;
                     head.Create_Date = DateTime.Now;
-                    head.Create_By = param.create_By;
+                    head.Create_By = param.creat_By;
                     //head.Update_Date = DateTime.Now;
                     //head.Update_By = param.update_By;
                     head.Transaction_Id = param.wmsTrans_Id;
@@ -271,7 +276,7 @@ namespace PlanGIBusiness.Demo
                         var unitVolume = (width * Length * Height);
                         planItem.UnitVolume = unitVolume;
                         planItem.Volume = ((planItem.TotalQty ?? 0) * (unitVolume / (planItem.UnitHeightRatio ?? 1)));
-                        planItem.Create_By = param.create_By;
+                        planItem.Create_By = param.creat_By;
                         planItem.Create_Date = DateTime.Now;
                         i++;
                         db.im_PlanGoodsIssueItem.Add(planItem);
@@ -281,22 +286,18 @@ namespace PlanGIBusiness.Demo
                 state = "5";
                 db.SaveChanges();
 
-                result.status = "1";
-                result.statusAfter = "1";
-                result.statusBefore = "1";
+                
                 result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                result.statusDesc = "SUCCESS";
+                result.statusDesc = "รอยืนยัน";
                 Callback_OMS(result);
 
                 return result;
             }
             catch (Exception ex)
             {
-                result.status = "-1";
-                result.statusAfter = "-1";
-                result.statusBefore = "-1";
+                
                 result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                result.statusDesc = state + " : " + ex.Message;
+                result.statusDesc = ex.Message;
                 Callback_OMS(result);
                 return result;
             }
@@ -574,7 +575,7 @@ namespace PlanGIBusiness.Demo
             }
             else { }
 
-            if (string.IsNullOrEmpty(param.create_By))
+            if (string.IsNullOrEmpty(param.creat_By))
             {
                 if (!string.IsNullOrEmpty(result))
                 {
@@ -582,7 +583,7 @@ namespace PlanGIBusiness.Demo
                 }
                 else
                 {
-                    result += " SO_Cha is empty";
+                    result += " create_By is empty";
                     return result;
                 }
             }

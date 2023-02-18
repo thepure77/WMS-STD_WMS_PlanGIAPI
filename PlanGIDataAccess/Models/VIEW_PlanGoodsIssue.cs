@@ -381,6 +381,7 @@ namespace PlanGIDataAccess.Models
         public DateTime? Date_Budget { get; set; }
         public DateTime? Confirm_Date { get; set; }
         public int? First_Order { get; set; }
+        public int? Pre_Order { get; set; }
 
         public string TruckLoad_No { get; set; }
         public int Order_seq { get; set; }

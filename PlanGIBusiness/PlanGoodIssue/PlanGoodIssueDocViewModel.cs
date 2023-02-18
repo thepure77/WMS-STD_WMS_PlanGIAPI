@@ -366,6 +366,7 @@ namespace PlanGIBusiness.PlanGoodIssue
         public string date_Budget { get; set; }
         public string confirmpsotdate { get; set; }
         public int? first_Order { get; set; }
+        public int? Pre_Order { get; set; }
 
         public List<PlanGoodIssueDocViewModelItem> listplanGoodsIssueItemViewModel { get; set; }
         public List<document> documents { get; set; }

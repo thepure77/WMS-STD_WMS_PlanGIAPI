@@ -310,6 +310,7 @@ namespace planGIBusiness.PlanGoodsIssue
         public string matdoc_no { get; set; }
         public int? RunWave_Status { get; set; }
         public int? first_Order { get; set; }
+        public int? Pre_Order { get; set; }
 
         public List<sortViewModel> sort { get; set; }
         public List<statusViewModel> status { get; set; }

@@ -433,6 +433,7 @@ namespace PlanGIBusiness.PlanGoodIssue
                     resultItem.GoodsIssue_No = item.GoodsIssue_No;
                     resultItem.RunWave_Status = item.RunWave_Status;
                     resultItem.first_Order = item.First_Order ?? 0;
+                    resultItem.Pre_Order = item.Pre_Order ?? 0 /*( == 0 ? "No" : "Yes")*/;
 
                     Statue = item.Document_Status.ToString();
                     var ProcessStatusName = ProcessStatus.Where(c => c.processStatus_Id == Statue).FirstOrDefault();
@@ -721,6 +722,7 @@ namespace PlanGIBusiness.PlanGoodIssue
                     itemHeader.Promotion_Code = data.promotion_Code;
                     itemHeader.Import_Index = data.import_Index;
                     itemHeader.First_Order = data.first_Order;
+                    itemHeader.Pre_Order = data.Pre_Order;
 
                     if (IsNew == true)
                     {
@@ -1583,6 +1585,7 @@ namespace PlanGIBusiness.PlanGoodIssue
                 resultItem.sales_Person = queryResult.Sales_Person;
                 resultItem.promotion_Code = queryResult.Promotion_Code;
                 resultItem.first_Order = queryResult.First_Order ?? 0;
+                resultItem.Pre_Order = queryResult.Pre_Order ?? 0;
 
                 var Listdocuments = new List<document>();
                 var DocumentFile = db.im_DocumentFile.Where(c => c.Ref_Index == queryResult.PlanGoodsIssue_Index && c.DocumentFile_Status == 0).ToList();

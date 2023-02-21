@@ -28,35 +28,52 @@ namespace PlanGIBusiness.Demo
             this.db = db;
         }
 
-        public DemoCallbackViewModel CreateSO(DemoSORequestViewModel param)
+        public DemoSOResponseViewModel CreateSO(DemoSORequestViewModel param)
         {
-            var result = new DemoCallbackViewModel();
+            var result = new DemoSOResponseViewModel();
+            var callback_req = new DemoCallbackViewModel();
             string message = "";
             var productList = new List<ProductViewModel>();
             var conversionList = new List<ProductConversionViewModelDoc>();
-
+            var logindex = Guid.NewGuid();
             string state = "0";
             try
             {
-                result.referenceNo = param.so_No;
-                result.status = "100";
-                result.statusAfter = "101";
-                result.statusBefore = "000";
-                result.statusDesc = "Order API";
-                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                result.document_No = param.so_No;
+                callback_req.referenceNo = param.so_No;
+                callback_req.status = "100";
+                callback_req.statusAfter = "101";
+                callback_req.statusBefore = null;
+                callback_req.statusDesc = "คำสั่งใหม่";
+                callback_req.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+
+                var callback_res1 = Callback_OMS(callback_req);
+                SaveLogRequest(param.so_No, param.sJson(), "Create SO", 1, "", logindex);
+                
+                if (callback_res1 != "Success")
+                {
+                    result.status = -1;
+                    result.message = "Callback fail";
+                    SaveLogResponse(param.so_No, result.sJson(), "Create SO", result.status, result.message, logindex);
+                    return result;
+                }
+                else { }
+
                 var chkreq = CheckReq_SO(param);
 
-                result.status = "101";
-                result.statusAfter = "102";
-                result.statusBefore = "100";
-                result.statusDesc = "รอยืนยัน";
+                callback_req.status = "101";
+                callback_req.statusAfter = "102";
+                callback_req.statusBefore = "100";
+                callback_req.statusDesc = "รอจัด";
 
                 if (chkreq != "")
                 {
-                    
-                    result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                    result.statusDesc = chkreq;
-                    Callback_OMS(result);
+
+                    //result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                    result.status = -1;
+                    result.message = chkreq;
+                    //Callback_OMS(result);
+                    SaveLogResponse(param.so_No, result.sJson(), "Create SO", result.status, result.message, logindex);
                     return result;
                 }
                 else { }
@@ -70,15 +87,19 @@ namespace PlanGIBusiness.Demo
                     ProductfilterModel.product_Id = i.product_Id;
                     //GetConfig
                     var productMasterResult = utils.SendDataApi<List<ProductViewModel>>(new AppSettingConfig().GetUrl("product"), ProductfilterModel.sJson());
-                    productList.Add(productMasterResult.FirstOrDefault());
-                    if (productList.Count == 0)
+                    //productList.Add(productMasterResult.FirstOrDefault());
+                    if (productMasterResult.Count == 0)
                     {
                         if (!string.IsNullOrEmpty(message))
                         {
                             message += " | ";
                         }
-                        message += " Error : Product " + i.product_Id + " not found";
+                        message += "Product " + i.product_Id + " not found";
                         continue;
+                    }
+                    else
+                    {
+                        productList.Add(productMasterResult.FirstOrDefault());
                     }
 
                     state = "1";
@@ -87,25 +108,31 @@ namespace PlanGIBusiness.Demo
                     conversionModel.productConversion_Name = i.sale_Unit;
                     conversionModel.product_Index = productMasterResult[0].product_Index ?? Guid.Parse("00000000-0000-0000-0000-000000000000");
                     var conversionMasterResult = utils.SendDataApi<List<ProductConversionViewModelDoc>>(new AppSettingConfig().GetUrl("dropdownProductconversion"), conversionModel.sJson());
-                    conversionList.Add(conversionMasterResult.FirstOrDefault());
-                    if (conversionList.Count == 0)
+                    
+                    if (conversionMasterResult.Count == 0)
                     {
                         if (!string.IsNullOrEmpty(message))
                         {
                             message += " | ";
                         }
-                        message += " Error : Product " + i.product_Id + " Conversion not found";
+                        message += "Product " + i.product_Id + " Conversion "+i.sale_Unit+" not found";
                         continue;
+                    }
+                    else
+                    {
+                        conversionList.Add(conversionMasterResult.FirstOrDefault());
                     }
                 }
 
                 state = "2";
                 if (message != "")
                 {
-                    
-                    result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                    result.statusDesc = message;
-                    Callback_OMS(result);
+
+                    //result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                    result.status = -1;
+                    result.message = message;
+                    //Callback_OMS(result);
+                    SaveLogResponse(param.so_No, result.sJson(), "Create SO", result.status, result.message, logindex);
                     return result;
                 }
                 else
@@ -114,19 +141,13 @@ namespace PlanGIBusiness.Demo
                     if (plan != null)
                     {
                         
-                        result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                        result.statusDesc = "Order Duplicate";
-                        Callback_OMS(result);
+                        //result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                        result.status = -1;
+                        result.message = "Order Duplicate";
+                        //Callback_OMS(result);
+                        SaveLogResponse(param.so_No, result.sJson(), "Create SO", result.status, result.message, logindex);
                         return result;
                     }
-
-                    //var tran = db.im_PlanGoodsIssue.Where(c => c.Transaction_Id == param.wmsTrans_Id).FirstOrDefault();
-                    //if (tran != null)
-                    //{
-                    //    result.stauts = "-1";
-                    //    result.message = "wmsTrans_Id Duplicate";
-                    //    return result;
-                    //}
 
                     var url = new AppSettingConfig().GetUrl("dropDownDocumentType");
                     var docrequest = new GenDocumentTypeViewModel();
@@ -152,17 +173,21 @@ namespace PlanGIBusiness.Demo
                     head.Owner_Index = DataOwner.owner_Index;
                     head.Owner_Id = DataOwner.owner_Id;
                     head.Owner_Name = DataOwner.owner_Name;
-
-                    head.SoldTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
+                    
                     head.ShipTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
                     head.ShipTo_Name = param.name;
                     head.ShipTo_Address = param.address;
+
+                    head.SoldTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
+                    head.SoldTo_Name = param.name;
+                    head.SoldTo_Address = param.address;
+
                     head.SubDistrict_Name = param.sub_district;
                     head.District_Name = param.district;
                     head.Province_Name = param.province;
                     head.Postcode_Name = param.postCode;
                     head.PlanGoodsIssue_Date = DocumentDate;
-                    //head.PlanGoodsIssue_Due_Date = DocumentDate;
+                    head.PlanGoodsIssue_Due_Date = DocumentDate;
                     head.Document_Status = 0;
 
                     head.Document_Remark = param.document_Remark;
@@ -287,18 +312,37 @@ namespace PlanGIBusiness.Demo
                 db.SaveChanges();
 
                 
-                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                result.statusDesc = "รอยืนยัน";
-                Callback_OMS(result);
+                callback_req.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                callback_req.statusDesc = "รอยืนยัน";
 
+                var callback_res2 = Callback_OMS(callback_req);
+
+                SaveLogResponse(param.so_No, result.sJson(), "Create SO", 1, "", logindex);
+
+                if (callback_res2 != "Success")
+                {
+                    result.status = -1;
+                    result.message = "Callback fail";
+
+                    SaveLogResponse(param.so_No, result.sJson(), "Create SO", -1, result.message, logindex);
+                    return result;
+                }
+                else { }
+
+                result.status = 1;
+                result.message = "Success";
                 return result;
             }
             catch (Exception ex)
             {
                 
-                result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
-                result.statusDesc = ex.Message;
-                Callback_OMS(result);
+                //result.statusDateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:sss");
+                //result.statusDesc = ex.Message;
+                //Callback_OMS(result);
+                result.status = -1;
+                result.message = ex.Message;
+
+                SaveLogResponse(param.so_No, result.sJson(), "Create SO", -1, result.message, logindex);
                 return result;
             }
 
@@ -311,16 +355,15 @@ namespace PlanGIBusiness.Demo
             result.reason_code = 0;
             Boolean IsNew = false;
             var truckLoadIndex = Guid.NewGuid();
+            var logindex = Guid.NewGuid();
             var p = param.sJson();
 
             try
             {
+                SaveLogRequest(param.tm_no, result.sJson(), "Create Shipment", 1, "", logindex);
                 var provider = new System.Globalization.CultureInfo("en-US");
-                //var vehicleUrl = new AppSettingConfig().GetUrl("VehicleTypeUrl");
                 var vehicleModel = new VehicleTypeViewModel();
                 vehicleModel.key = param.vehicleType_Id;
-                //var vehicleJson = SendDataUtil.SerializeObject(vehicleModel);
-                //var vehicle = SendDataUtil.SendDataApi<actionResultVehicleTypeViewModel>(vehicleUrl, vehicleJson);
                 var vehicle = utils.SendDataApi<actionResultVehicleTypeViewModel>(new AppSettingConfig().GetUrl("VehicleTypeUrl"), vehicleModel.sJson());
 
                 if (vehicle == null || vehicle.itemsVehicleType.Count == 0)
@@ -328,6 +371,8 @@ namespace PlanGIBusiness.Demo
                     result.document_No = param.tm_no;
                     result.result = false;
                     result.message = "vehicleType_Id not found.";
+
+                    SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                     return result;
                 }
                 else
@@ -338,6 +383,7 @@ namespace PlanGIBusiness.Demo
                         result.document_No = param.tm_no;
                         result.result = false;
                         result.message = "vehicleType_Id not found.";
+                        SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                         return result;
                     }
                 }
@@ -350,6 +396,7 @@ namespace PlanGIBusiness.Demo
                     result.document_No = param.tm_no;
                     result.result = false;
                     result.message = checkdata;
+                    SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                     return result;
                 }
                 else
@@ -360,6 +407,7 @@ namespace PlanGIBusiness.Demo
                         result.document_No = param.tm_no;
                         result.result = false;
                         result.message = "tm_no is duplicate.";
+                        SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                         return result;
                     }
                     else
@@ -372,6 +420,7 @@ namespace PlanGIBusiness.Demo
                                 result.document_No = param.tm_no;
                                 result.result = false;
                                 result.message = "planGoodsIssue_No " + item.planGoodsIssue_No + " not found.";
+                                SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                                 return result;
                             }
                         }
@@ -443,7 +492,7 @@ namespace PlanGIBusiness.Demo
                                     result.document_No = param.tm_no;
                                     result.result = false;
                                     result.message = "planGoodsIssue_No " + item.planGoodsIssue_No + " not found.";
-                                    
+                                    SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                                     return result;
                                 }
                                 else
@@ -490,6 +539,7 @@ namespace PlanGIBusiness.Demo
                 }
                 result.document_No = param.tm_no;
                 result.result = true;
+                SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", 1, result.message, logindex);
                 return result;
             }
             catch(Exception ex)
@@ -497,6 +547,7 @@ namespace PlanGIBusiness.Demo
                 result.document_No = param.tm_no;
                 result.result = false;
                 result.message = "vehicleType_Id not found.";
+                SaveLogResponse(param.tm_no, result.sJson(), "Create Shipment", -1, result.message, logindex);
                 return result;
             }
         }
@@ -806,13 +857,81 @@ namespace PlanGIBusiness.Demo
         {
             try
             {
-                var conversionMasterResult = utils.SendDataApi<List<ProductConversionViewModelDoc>>(new AppSettingConfig().GetUrl("callback_OMS"), param.sJson());
-                return "Success";
+                var logindex = Guid.NewGuid();
+                var modelj = param.sJson();
+                SaveLogRequest(param.referenceNo, modelj, param.statusDesc, 1, param.statusDesc, logindex);
+                var result = utils.SendDataApi<DemoCallbackResponseViewModel>(new AppSettingConfig().GetUrl("callback_OMS"), param.sJson());
+                modelj = result.sJson();
+                if (result.status == "200")
+                {
+                    
+                    SaveLogResponse(param.referenceNo, modelj, param.statusDesc, 1, param.statusDesc, logindex);
+                    return "Success";
+                }
+                else
+                {
+                    SaveLogResponse(param.referenceNo, modelj, param.statusDesc, -1, param.statusDesc, logindex);
+                    return "Fail";
+                }
+                
             }
             catch (Exception ex)
             {
                 return "Fail";
             }
+        }
+
+        public string SaveLogRequest(string orderno,string json,string interfacename,int status,string txt,Guid logindex)
+        {
+            try
+            {
+                log_api_request l = new log_api_request();
+                l.log_id = logindex;
+                l.log_date = DateTime.Now;
+                l.log_requestbody = json;
+                l.log_absoluteuri = "";
+                l.status = status;
+                l.Interface_Name = interfacename;
+                l.Status_Text = txt;
+                l.File_Name = orderno;
+                db.log_api_request.Add(l);
+                db.SaveChanges();
+                return "";
+            }
+            catch(Exception e)
+            {
+                throw e;
+            }
+            
+        }
+
+        public string SaveLogResponse(string orderno, string json, string interfacename, int status, string txt, Guid logindex)
+        {
+            try
+            {
+                log_api_reponse l = new log_api_reponse();
+                l.log_id = logindex;
+                l.log_date = DateTime.Now;
+                l.log_reponsebody = json;
+                l.log_absoluteuri = "";
+                l.status = status;
+                l.Interface_Name = interfacename;
+                l.Status_Text = txt;
+                l.File_Name = orderno;
+                db.log_api_reponse.Add(l);
+
+                var d = db.log_api_request.Find(logindex);
+                d.status = status;
+                d.Status_Text = txt;
+
+                db.SaveChanges();
+                return "";
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+
         }
     }
 }

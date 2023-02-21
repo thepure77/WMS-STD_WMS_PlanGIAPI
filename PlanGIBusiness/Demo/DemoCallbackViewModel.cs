@@ -13,4 +13,16 @@ namespace PlanGIBusiness.Demo
         public string statusDesc { get; set; }
         public string statusDateTime { get; set; }
     }
+
+    public class DemoCallbackResponseViewModel
+    {
+        public string status { get; set; }
+        public string message { get; set; }
+        public DemoCallbackResponseItemViewModel data { get; set; }
+    }
+
+    public class DemoCallbackResponseItemViewModel
+    {
+        public string logId { get; set; }
+    }
 }

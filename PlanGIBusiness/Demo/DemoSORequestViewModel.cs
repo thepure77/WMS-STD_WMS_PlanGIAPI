@@ -39,7 +39,8 @@ namespace PlanGIBusiness.Demo
 
     public class DemoSOResponseViewModel
     {
-        public string stauts { get; set; }
+        public string document_No { get; set; }
+        public int status { get; set; }
         public string message { get; set; }
     }
 }

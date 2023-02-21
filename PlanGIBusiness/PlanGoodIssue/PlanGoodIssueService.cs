@@ -444,6 +444,7 @@ namespace PlanGIBusiness.PlanGoodIssue
                     //resultItem.weight = string.Format(String.Format("{0:N3}", item.Weight));
 
                     resultItem.create_By = item.Create_By;
+                    resultItem.create_Date = item.Create_Date;
                     resultItem.update_By = item.Update_By;
                     resultItem.cancel_By = item.Cancel_By;
                     resultItem.TruckLoad_No = item.TruckLoad_No;

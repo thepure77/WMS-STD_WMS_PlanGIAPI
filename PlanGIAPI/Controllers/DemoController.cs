@@ -7,7 +7,7 @@ using PlanGIBusiness.Demo;
 
 namespace PlanGIAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/InterfaceOutBound")]
     [ApiController]
     public class DemoController : Controller
     {

@@ -10,14 +10,25 @@ namespace PlanGIBusiness.Demo
         public string so_No { get; set; }
         public string so_Cha { get; set; }
         //public string do_Type { get; set; }
-        public string name { get; set; }
-        public string address { get; set; }
-        public string sub_district { get; set; }
-        public string district { get; set; }
-        public string province { get; set; }
-        public string postCode { get; set; }
+        public string receiveName { get; set; }
+        public string receiveAddress { get; set; }
+        public string receiveSubDistrict { get; set; }
+        public string receiveDistrict { get; set; }
+        public string receiveProvince { get; set; }
+        public string receivePostCode { get; set; }
+        public string receiveTel { get; set; }
         //public string planGoodsIssue_Date { get; set; }
         //public string document_Status { get; set; }
+
+        public string senderName { get; set; }
+        public string senderAddress { get; set; }
+        public string senderSubDistrict { get; set; }
+        public string senderDistrict   { get; set; }
+        public string senderProvince { get; set; }
+        public string senderPostCode { get; set; }
+        public string senderTel { get; set; }
+
+
         public string export_Case { get; set; }
         public string document_Remark { get; set; }
         //public string Creat_Date           { get; set; }

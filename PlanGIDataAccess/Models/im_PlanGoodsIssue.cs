@@ -387,9 +387,17 @@ namespace PlanGIDataAccess.Models
         public string Transaction_Id { get; set; }
         public string Shipping_Channel { get; set; }
         public string Export_Case { get; set; }
-        public string SubDistrict_Name { get; set; }
-        public string District_Name { get; set; }
-        public string Province_Name { get; set; }
-        public string Postcode_Name { get; set; }
+        public string ShipTo_SubDistrict_Name { get; set; }
+        public string ShipTo_District_Name { get; set; }
+        public string ShipTo_Province_Name { get; set; }
+        public string ShipTo_Postcode { get; set; }
+
+        public string SoldTo_Province_Name  { get; set; }
+        public string SoldTo_District_Name { get; set; }
+        public string SoldTo_SubDistrict_Name { get; set; }
+        public string SoldTo_Postcode { get; set; }
+
+
+
     }
 }

@@ -137,7 +137,7 @@ namespace PlanGIBusiness.Demo
                 }
                 else
                 {
-                    var plan = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == param.so_No).FirstOrDefault();
+                    var plan = db.im_PlanGoodsIssue.Where(c => c.PlanGoodsIssue_No == param.so_No && c.Document_Status != -1).FirstOrDefault();
                     if (plan != null)
                     {
                         
@@ -159,7 +159,16 @@ namespace PlanGIBusiness.Demo
                     var OwnerModel = new OwnerViewModel();
                     var urlOwner = new AppSettingConfig().GetUrl("dropdownOwner");
                     var resultOwner = utils.SendDataApi<List<OwnerViewModel>>(urlOwner, OwnerModel.sJson());
-                    var DataOwner = resultOwner.Find(c => c.owner_Index == Guid.Parse("02B31868-9D3D-448E-B023-05C121A424F4"));
+                    //var DataOwner = resultOwner.Find(c => c.owner_Index == Guid.Parse("02B31868-9D3D-448E-B023-05C121A424F4"));
+                    var DataOwner = resultOwner.Where(c => c.owner_Id == param.so_Cha).FirstOrDefault();
+                    if(DataOwner == null)
+                    {
+                        result.status = -1;
+                        result.message = "Owner not found";
+                        //Callback_OMS(result);
+                        SaveLogResponse(param.so_No, result.sJson(), "Create SO", result.status, result.message, logindex);
+                        return result;
+                    }
 
                     DateTime DocumentDate = Convert.ToDateTime(DateTime.Now);
                     im_PlanGoodsIssue head = new im_PlanGoodsIssue();
@@ -175,17 +184,26 @@ namespace PlanGIBusiness.Demo
                     head.Owner_Name = DataOwner.owner_Name;
                     
                     head.ShipTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
-                    head.ShipTo_Name = param.name;
-                    head.ShipTo_Address = param.address;
+                    head.ShipTo_Name = param.receiveName;
+                    head.ShipTo_Address = param.receiveAddress;
+                    head.ShipTo_SubDistrict_Name = param.receiveSubDistrict;
+                    head.ShipTo_District_Name = param.receiveDistrict;
+                    head.ShipTo_Province_Name = param.receiveProvince;
+                    head.ShipTo_Postcode = param.receivePostCode;
+                    head.ShipTo_Telephone = param.receiveTel;
 
                     head.SoldTo_Index = Guid.Parse("00000000-0000-0000-0000-000000000000");
-                    head.SoldTo_Name = param.name;
-                    head.SoldTo_Address = param.address;
+                    //head.SoldTo_Name = param.name;
+                    //head.SoldTo_Address = param.address;
+                    head.SoldTo_Name = param.senderName;
+                    head.SoldTo_Address = param.senderAddress;
+                    head.SoldTo_Tel = param.senderTel;
+                    head.SoldTo_Province_Name = param.senderProvince;
+                    head.SoldTo_SubDistrict_Name = param.senderSubDistrict;
+                    head.SoldTo_District_Name = param.senderDistrict;
+                    head.SoldTo_Postcode     = param.senderPostCode;
 
-                    head.SubDistrict_Name = param.sub_district;
-                    head.District_Name = param.district;
-                    head.Province_Name = param.province;
-                    head.Postcode_Name = param.postCode;
+                    
                     head.PlanGoodsIssue_Date = DocumentDate;
                     head.PlanGoodsIssue_Due_Date = DocumentDate;
                     head.Document_Status = 0;
@@ -907,6 +925,7 @@ namespace PlanGIBusiness.Demo
 
         public string SaveLogResponse(string orderno, string json, string interfacename, int status, string txt, Guid logindex)
         {
+            bool IsNew = false;
             try
             {
                 log_api_reponse l = new log_api_reponse();
@@ -921,8 +940,29 @@ namespace PlanGIBusiness.Demo
                 db.log_api_reponse.Add(l);
 
                 var d = db.log_api_request.Find(logindex);
+                if (d == null)
+                {
+                    IsNew = true;
+                    d = new log_api_request();
+                    d.log_id = logindex;
+                    d.log_date = DateTime.Now;
+                    d.log_requestbody = "";
+                    d.log_absoluteuri = "";
+                    d.status = status;
+                    d.Interface_Name = interfacename;
+                    d.Status_Text = txt;
+                    d.File_Name = orderno;
+                }
                 d.status = status;
                 d.Status_Text = txt;
+
+                if (IsNew)
+                {
+                    db.log_api_request.Add(d);
+                }
+                else
+                {
+                }
 
                 db.SaveChanges();
                 return "";
